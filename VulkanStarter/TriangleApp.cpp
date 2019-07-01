@@ -13,7 +13,8 @@ void TriangleApp::Run()
 void TriangleApp::InitVulkan()
 {
 	CreateInstance();
-	SetupDebugMessenger();
+	SetupDebugCallback();
+	PickPhysicalDevice();
 }
 
 void TriangleApp::MainLoop()
@@ -156,9 +157,9 @@ std::vector<const char*> TriangleApp::GetRequiredExtensions()
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL TriangleApp::DebugCallback(
-	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
-	VkDebugUtilsMessageTypeFlagsEXT messageType, 
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT messageType,
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* pUserData)
 {
 	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
@@ -174,15 +175,80 @@ void TriangleApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateIn
 	createInfo.pfnUserCallback = DebugCallback;
 }
 
+void TriangleApp::PickPhysicalDevice()
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+	if (deviceCount == 0)
+	{
+		throw runtime_error("failed to find GPUs with vulkan support");
+	}
+
+	vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	for (const auto& device : devices)
+	{
+		if (IsDeviceSuitable(device))
+		{
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE)
+	{
+		throw runtime_error("failed to find a suitable GPU. ");
+	}
+
+	
+}
+
+bool TriangleApp::IsDeviceSuitable(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices = FindQueueFamilies(device);
+
+	return indices.m_IsComplete();
+}
+
+QueueFamilyIndices TriangleApp::FindQueueFamilies(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies) 
+	{
+		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) 
+		{
+			indices.graphicsFamily = i;
+		}
+
+		if (indices.m_IsComplete()) 
+		{
+			break;
+		}
+
+		i++;
+	}
+
+	return indices;
+}
+
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr) 
+	if (func != nullptr)
 	{
 		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
 	}
-	else 
+	else
 	{
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
@@ -191,13 +257,13 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
 {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr) 
+	if (func != nullptr)
 	{
 		func(instance, debugMessenger, pAllocator);
 	}
 }
 
-void TriangleApp::SetupDebugMessenger()
+void TriangleApp::SetupDebugCallback()
 {
 	if (!enableValidationLayers)
 		return;
@@ -205,7 +271,7 @@ void TriangleApp::SetupDebugMessenger()
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 	populateDebugMessengerCreateInfo(debugCreateInfo);
 
-	if (CreateDebugUtilsMessengerEXT(instance, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS) 
+	if (CreateDebugUtilsMessengerEXT(instance, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to set up debug messenger!");
 	}
