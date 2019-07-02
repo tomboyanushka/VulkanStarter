@@ -51,6 +51,8 @@ private:
 	VkDebugUtilsMessengerEXT debugMessenger = {};
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkDevice device;
+	VkQueue graphicsQueue;
 
 	void InitVulkan();
 	void MainLoop();
@@ -73,6 +75,9 @@ private:
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+
+	//you can create multiple logical devices from the same physical device
+	void CreateLogicalDevice(); 
 
 };
 
