@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <optional>
+#include <set>
 
 using namespace std;
 
@@ -31,10 +32,11 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 struct QueueFamilyIndices 
 {
 	std::optional<uint32_t> graphicsFamily;
+	optional<uint32_t> presentFamily;
 
 	bool m_IsComplete() //m_ --> function in a struct
 	{
-		return graphicsFamily.has_value();
+		return graphicsFamily.has_value() && presentFamily.has_value();
 	}
 };
 
@@ -53,6 +55,9 @@ private:
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice device;
 	VkQueue graphicsQueue;
+	VkQueue presentQueue;
+
+	VkSurfaceKHR surface;
 
 	void InitVulkan();
 	void MainLoop();
@@ -78,6 +83,8 @@ private:
 
 	//you can create multiple logical devices from the same physical device
 	void CreateLogicalDevice(); 
+
+	void CreateSurface();
 
 };
 
